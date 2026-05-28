@@ -129,12 +129,22 @@ function buildDemoData() {
 
   const clients = [
     { id: "cDemo1", name: "Marie Dupont", email: "marie.dupont@email.com", goal: "Perdre 5 kg et se tonifier", createdAt: now - 86400000 * 40, assignedSessions: [
-      { id: "asDemo1", title: "Haut du corps (maison)", createdAt: now - 86400000 * 2, exercises: [
+      { id: "asDemo1", title: "Haut du corps", createdAt: now - 86400000 * 5, exercises: [
         { name: "Pompes", group: "PECTORAUX", targetSeries: "4", targetReps: "12", targetCharge: "" },
         { name: "Tirage horizontal", group: "DORSAUX", targetSeries: "4", targetReps: "12", targetCharge: "20" },
         { name: "Élévations latérales frontales", group: "ÉPAULES", targetSeries: "3", targetReps: "15", targetCharge: "5" },
+      ], history: [
+        { doneAt: now - 86400000 * 2, note: "Bien passé, un peu dur sur les pompes en fin de série.", exercises: [
+          { checked: true, realCharge: "", realReps: "10" },
+          { checked: true, realCharge: "20", realReps: "12" },
+          { checked: true, realCharge: "5", realReps: "15" },
+        ] },
+      ] },
+      { id: "asDemo2", title: "Bas du corps", createdAt: now - 86400000 * 5, exercises: [
+        { name: "Squat sumo", group: "CUISSES", targetSeries: "4", targetReps: "12", targetCharge: "30" },
+        { name: "Fentes bulgares", group: "CUISSES", targetSeries: "3", targetReps: "12", targetCharge: "10" },
         { name: "Vélo", group: "CARDIO", cardio: true, targetTemps: "15 min", targetDurete: "Niveau 5" },
-      ], clientLog: null },
+      ], history: [] },
     ], weighins: [
       { ts: now - 86400000 * 35, date: dk(-35), poids: 74, imc: 25.6, graisse: 31, muscle: 30, metabolisme: 1380, viscerale: 9 },
       { ts: now - 86400000 * 18, date: dk(-18), poids: 72.5, imc: 25.1, graisse: 29, muscle: 31, metabolisme: 1410, viscerale: 8 },
@@ -795,10 +805,10 @@ function genProgram(profile) {
 
 function ClientProgram({ store, setTab }) {
   const { clients, setClients } = store;
-  // Démo : le "client connecté" = dernière fiche créée
   const fiche = clients.length ? clients[0] : null;
   const sessions = fiche?.assignedSessions || [];
-  const [active, setActive] = useState(null);
+  const [active, setActive] = useState(null);   // séance en cours d'exécution
+  const [hist, setHist] = useState(null);        // séance dont on regarde l'historique
 
   const updateFiche = (updated) => setClients(clients.map(c => c.id === updated.id ? updated : c));
 
@@ -810,27 +820,39 @@ function ClientProgram({ store, setTab }) {
     </div>
   );
 
-  // exécution d'une séance
+  // exécution
   if (active !== null) {
     const sess = sessions.find(s => s.id === active);
-    if (sess) return <ExecuteSession session={sess} onBack={() => setActive(null)} onSubmit={(log) => { updateFiche({ ...fiche, assignedSessions: sessions.map(s => s.id === sess.id ? { ...s, clientLog: log } : s) }); setActive(null); }} />;
+    if (sess) return <ExecuteSession session={sess} onBack={() => setActive(null)} onSubmit={(entry) => {
+      updateFiche({ ...fiche, assignedSessions: sessions.map(s => s.id === sess.id ? { ...s, history: [...(s.history || []), entry] } : s) });
+      setActive(null);
+    }} />;
+  }
+  // historique d'une séance
+  if (hist !== null) {
+    const sess = sessions.find(s => s.id === hist);
+    if (sess) return <SessionHistory session={sess} onBack={() => setHist(null)} />;
   }
 
   return (
     <div style={{ paddingTop: 24 }}>
       <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 22, textTransform: "uppercase", marginBottom: 4 }}>Mes séances</h2>
-      <p style={{ color: "#7a9098", fontSize: 13, marginBottom: 16 }}>Les séances préparées par Sébastien à faire en autonomie.</p>
+      <p style={{ color: "#7a9098", fontSize: 13, marginBottom: 16 }}>Choisis ta séance du jour. Tu peux les refaire autant de fois que tu veux.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {sessions.map(s => {
-          const done = s.clientLog?.done;
+          const count = (s.history || []).length;
+          const last = count ? s.history[count - 1] : null;
           return (
-            <div key={s.id} className="hov" onClick={() => setActive(s.id)} style={{ cursor: "pointer", background: `linear-gradient(120deg, ${CARD}, #081318)`, border: `1px solid ${done ? G + "66" : BORDER}`, borderRadius: 14, padding: 16 }}>
+            <div key={s.id} style={{ background: `linear-gradient(120deg, ${CARD}, #081318)`, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{s.title}</div>
-                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: done ? G : "#334", color: done ? "#04150a" : "#aaa" }}>{done ? "✓ Fait" : "À faire"}</span>
+                {count > 0 && <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: G_DIM, color: G, border: `1px solid ${G}` }}>{count}× faite</span>}
               </div>
-              <div style={{ fontSize: 12, color: "#7a9098", marginTop: 4 }}>{s.exercises.length} exercice{s.exercises.length > 1 ? "s" : ""} · validé par Seb</div>
-              <div style={{ color: G, fontSize: 13, fontWeight: 700, marginTop: 8 }}>{done ? "Revoir / modifier →" : "Commencer la séance →"}</div>
+              <div style={{ fontSize: 12, color: "#7a9098", marginTop: 4 }}>{s.exercises.length} exercice{s.exercises.length > 1 ? "s" : ""} · validé par Seb{last ? ` · dernière : ${new Date(last.doneAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}` : ""}</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button className="hov" onClick={() => setActive(s.id)} style={{ ...btnMain, width: "auto", flex: 1, padding: "10px 0", fontSize: 14 }}>Commencer →</button>
+                {count > 0 && <button className="hov" onClick={() => setHist(s.id)} style={{ ...btnGhost(false), padding: "10px 14px" }}>Historique</button>}
+              </div>
             </div>
           );
         })}
@@ -840,9 +862,9 @@ function ClientProgram({ store, setTab }) {
 }
 
 function ExecuteSession({ session, onBack, onSubmit }) {
-  const init = session.clientLog?.exercises || session.exercises.map(e => e.cardio ? { checked: false, realTemps: "", realDurete: "" } : { checked: false, realCharge: "", realReps: "" });
+  const init = session.exercises.map(e => e.cardio ? { checked: false, realTemps: "", realDurete: "" } : { checked: false, realCharge: "", realReps: "" });
   const [log, setLog] = useState(init);
-  const [note, setNote] = useState(session.clientLog?.note || "");
+  const [note, setNote] = useState("");
   const set = (i, f, v) => setLog(log.map((l, idx) => idx === i ? { ...l, [f]: v } : l));
   const toggle = (i) => setLog(log.map((l, idx) => idx === i ? { ...l, checked: !l.checked } : l));
   const doneCount = log.filter(l => l.checked).length;
@@ -882,7 +904,35 @@ function ExecuteSession({ session, onBack, onSubmit }) {
       <textarea style={{ ...inp, minHeight: 60, resize: "vertical" }} value={note} onChange={e => setNote(e.target.value)} placeholder="Ressenti, douleurs, questions…" />
 
       <div style={{ textAlign: "center", color: "#7a9098", fontSize: 13, margin: "14px 0" }}>{doneCount}/{session.exercises.length} exercices cochés</div>
-      <button className="hov" onClick={() => onSubmit({ done: true, exercises: log, note, doneAt: Date.now() })} style={{ ...btnMain }}>Envoyer à Sébastien</button>
+      <button className="hov" onClick={() => onSubmit({ exercises: log, note, doneAt: Date.now() })} style={{ ...btnMain }}>Terminer & envoyer à Sébastien</button>
+    </div>
+  );
+}
+
+function SessionHistory({ session, onBack }) {
+  const entries = [...(session.history || [])].sort((a, b) => b.doneAt - a.doneAt);
+  return (
+    <div style={{ paddingTop: 24 }}>
+      <button className="hov" onClick={onBack} style={{ background: "none", border: "none", color: G, cursor: "pointer", fontWeight: 700, fontSize: 13, padding: 0, marginBottom: 12 }}>← Mes séances</button>
+      <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 22, textTransform: "uppercase" }}>{session.title}</h2>
+      <p style={{ color: "#7a9098", fontSize: 13, marginBottom: 16 }}>Historique de tes passages.</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {entries.map((en, k) => (
+          <div key={k} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontWeight: 800, color: G, marginBottom: 8 }}>{new Date(en.doneAt).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long" })}</div>
+            {session.exercises.map((e, i) => {
+              const r = en.exercises[i] || {};
+              return (
+                <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, padding: "5px 0" }}>
+                  <span style={{ color: r.checked ? "#fff" : "#5a6b70" }}>{r.checked ? "✅" : "⬜"} {e.name}</span>
+                  <span style={{ color: "#9fb4ba" }}>{e.cardio ? (r.realTemps || "—") : `${r.realCharge || "—"} kg × ${r.realReps || "—"}`}</span>
+                </div>
+              );
+            })}
+            {en.note && <div style={{ marginTop: 8, fontSize: 12, color: "#cfe0e4", fontStyle: "italic" }}>💬 « {en.note} »</div>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1334,30 +1384,47 @@ function AssignedSessionsCoach({ client, onUpdate }) {
       {sessions.length === 0 && <Empty t="Aucune séance assignée" s="Prépare une séance que le client fera seul entre vos coachings." />}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {sessions.map(s => {
-          const log = s.clientLog;
+          const history = [...(s.history || [])].sort((a, b) => b.doneAt - a.doneAt);
+          const count = history.length;
+          const last = history[0];
           return (
-            <div key={s.id} style={{ background: CARD, border: `1px solid ${log?.done ? G + "66" : BORDER}`, borderRadius: 12, padding: 14 }}>
+            <div key={s.id} style={{ background: CARD, border: `1px solid ${count ? G + "66" : BORDER}`, borderRadius: 12, padding: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontWeight: 800 }}>{s.title}</div>
-                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: log?.done ? G : "#334", color: log?.done ? "#04150a" : "#aaa" }}>{log?.done ? "✓ Réalisée" : "À faire"}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: count ? G : "#334", color: count ? "#04150a" : "#aaa" }}>{count ? `${count}× faite` : "Pas encore faite"}</span>
               </div>
-              <div style={{ fontSize: 12, color: "#7a9098", marginTop: 4 }}>{s.exercises.length} exercice{s.exercises.length > 1 ? "s" : ""}</div>
-              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                {s.exercises.map((e, i) => {
-                  const done = log?.exercises?.[i];
-                  return (
-                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 5 }}>
-                      <span style={{ color: done?.checked ? "#fff" : "#9fb4ba" }}>{done?.checked ? "✅ " : "⬜ "}{e.name}</span>
-                      <span style={{ color: "#7a9098" }}>
-                        {e.cardio
-                          ? `cible ${e.targetTemps || "?"}${log?.done ? ` · fait ${done?.realTemps || "—"}` : ""}`
-                          : `cible ${e.targetSeries || "?"}×${e.targetReps || "?"} ${e.targetCharge ? "@" + e.targetCharge + "kg" : ""}${log?.done ? ` · fait ${done?.realCharge || "—"}kg` : ""}`}
-                      </span>
+              <div style={{ fontSize: 12, color: "#7a9098", marginTop: 4 }}>{s.exercises.length} exercice{s.exercises.length > 1 ? "s" : ""}{last ? ` · dernière : ${new Date(last.doneAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}` : ""}</div>
+
+              {/* dernier passage du client */}
+              {last && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11, color: G, fontWeight: 800, textTransform: "uppercase", marginBottom: 6 }}>Dernier passage</div>
+                  {s.exercises.map((e, i) => {
+                    const r = last.exercises[i] || {};
+                    return (
+                      <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 5, marginBottom: 4 }}>
+                        <span style={{ color: r.checked ? "#fff" : "#5a6b70" }}>{r.checked ? "✅ " : "⬜ "}{e.name}</span>
+                        <span style={{ color: "#7a9098" }}>
+                          {e.cardio
+                            ? `cible ${e.targetTemps || "?"} · fait ${r.realTemps || "—"}`
+                            : `cible ${e.targetSeries || "?"}×${e.targetReps || "?"} · fait ${r.realCharge || "—"}kg×${r.realReps || "—"}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {last.note && <div style={{ marginTop: 6, fontSize: 12, color: "#cfe0e4", fontStyle: "italic" }}>💬 « {last.note} »</div>}
+                  {count > 1 && <div style={{ fontSize: 11, color: "#7a9098", marginTop: 6 }}>+ {count - 1} autre{count - 1 > 1 ? "s" : ""} passage{count - 1 > 1 ? "s" : ""} dans l'historique</div>}
+                </div>
+              )}
+              {!last && (
+                <div style={{ marginTop: 8 }}>
+                  {s.exercises.map((e, i) => (
+                    <div key={i} style={{ fontSize: 13, color: "#9fb4ba", borderBottom: `1px solid ${BORDER}`, paddingBottom: 4, marginBottom: 4 }}>
+                      {e.name} <span style={{ color: "#5a6b70" }}>— {e.cardio ? (e.targetTemps || "?") : `${e.targetSeries || "?"}×${e.targetReps || "?"}${e.targetCharge ? " @" + e.targetCharge + "kg" : ""}`}</span>
                     </div>
-                  );
-                })}
-              </div>
-              {log?.done && log.note && <div style={{ marginTop: 8, fontSize: 12, color: "#cfe0e4", fontStyle: "italic" }}>💬 « {log.note} »</div>}
+                  ))}
+                </div>
+              )}
               <button className="hov" onClick={() => delSession(s.id)} style={{ ...btnGhost(false), width: "100%", marginTop: 10, fontSize: 12, borderColor: "#552" }}>Supprimer</button>
             </div>
           );
