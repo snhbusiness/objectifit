@@ -59,6 +59,19 @@ const PARTENAIRES = [
   { id: "leslie", name: "Leslie", role: "Bientôt parmi nous", tagline: "Nouveau partenariat en préparation.", url: "", initials: "L", active: false },
 ];
 
+// ---- BIBLIOTHÈQUE D'EXERCICES (d'après la fiche de Sébastien) ----
+const EXO_LIB = {
+  "PECTORAUX": ["Développé couché hammer", "Développé incliné haltères", "Chest press", "Écartés incliné", "Écartés couché", "Pompes", "Écartés décliné", "Poulie vis-à-vis", "Butterfly"],
+  "ÉPAULES": ["Développé militaire", "Développé nuque", "Développé devant", "Élévations latérales frontales", "Rowing menton", "Élévations postérieures", "Élévation frontale poulie", "Rhomboïde corde", "Oiseau", "Rotation bras"],
+  "DORSAUX": ["Tirage vertical serré", "Tirage Hammer", "Tirage horizontal", "Row machine", "Rétropulsion poulie haute", "Verticale traction", "Adduction vis-à-vis", "Tirage haltère", "Tractions", "Pompes"],
+  "CUISSES": ["Press horizontale", "Fentes bulgares", "Leg extension", "Press unilatérale", "Squat sumo", "Leg curl allongé", "Leg curl debout", "Abducteurs", "Adducteurs", "Hip thrust", "Soulevé de terre", "Good morning", "Oiseau"],
+  "BICEPS": ["Curls haltères", "Curls barre EZ", "Curls marteau", "Curls poulie basse", "Curls Larry Scott", "Curls poulie", "Banc lombaire"],
+  "TRICEPS": ["Barre front", "Poulie haute", "Extension assis", "Développé serré", "Dips machine", "Kick back"],
+  "ABDOMINAUX": ["Banc incliné", "Gainage", "Gainage latéral", "Relevé bassin", "Relevé buste", "Chaise romaine"],
+  "CARDIO": ["Tapis de marche", "Stepper", "Step", "Climber", "Rameur", "Vélo", "Elliptique"],
+};
+const CARDIO_GROUP = "CARDIO";
+
 const DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const SLOT_HOURS = ["07:00","08:00","09:00","10:00","12:00","17:00","18:00","19:00","20:00"];
@@ -106,6 +119,40 @@ const fmtDateKey = (d) => d.toISOString().slice(0, 10);
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const euro = (n) => (n === 0 ? "Offert" : n + " €");
 
+// ---- DONNÉES DE DÉMO (chargées au 1er lancement pour que Seb ait de quoi tester) ----
+function buildDemoData() {
+  const today = new Date();
+  const day = (today.getDay() + 6) % 7;
+  const monday = addDays(today, -day);
+  const dk = (offset) => fmtDateKey(addDays(monday, offset));
+  const now = Date.now();
+
+  const clients = [
+    { id: "cDemo1", name: "Marie Dupont", email: "marie.dupont@email.com", goal: "Perdre 5 kg et se tonifier", createdAt: now - 86400000 * 40, weighins: [
+      { ts: now - 86400000 * 35, date: dk(-35), poids: 74, imc: 25.6, graisse: 31, muscle: 30, metabolisme: 1380, viscerale: 9 },
+      { ts: now - 86400000 * 18, date: dk(-18), poids: 72.5, imc: 25.1, graisse: 29, muscle: 31, metabolisme: 1410, viscerale: 8 },
+      { ts: now - 86400000 * 3, date: dk(-3), poids: 71, imc: 24.6, graisse: 27, muscle: 32, metabolisme: 1440, viscerale: 7 },
+    ] },
+    { id: "cDemo2", name: "Thomas Bernard", email: "t.bernard@email.com", goal: "Prise de muscle", createdAt: now - 86400000 * 20, weighins: [
+      { ts: now - 86400000 * 14, date: dk(-14), poids: 78, imc: 23.4, graisse: 18, muscle: 38, metabolisme: 1750, viscerale: 6 },
+      { ts: now - 86400000 * 2, date: dk(-2), poids: 79.5, imc: 23.8, graisse: 17, muscle: 40, metabolisme: 1790, viscerale: 6 },
+    ] },
+  ];
+
+  const bookings = [
+    { id: "bDemo1", name: "Julie Martin", email: "julie.martin@email.com", phone: "06 12 34 56 78", dateKey: dk(3), hour: "12:00", offerId: "solo", offerName: "Séance individuelle", price: 60, sessions: 1, status: "en attente", paid: true, createdAt: now - 3600000, session: null },
+    { id: "bDemo2", name: "Marie Dupont", email: "marie.dupont@email.com", phone: "06 22 33 44 55", dateKey: dk(1), hour: "10:00", offerId: "solo", offerName: "Séance individuelle", price: 60, sessions: 1, status: "confirmé", paid: true, createdAt: now - 86400000, session: null },
+    { id: "bDemo3", name: "Marie Dupont", email: "marie.dupont@email.com", phone: "06 22 33 44 55", dateKey: dk(-3), hour: "10:00", offerId: "solo", offerName: "Séance individuelle", price: 60, sessions: 1, status: "confirmé", paid: true, createdAt: now - 86400000 * 4, session: {
+      duration: 60, rating: 4, note: "Bonne séance, énergie au top. Travailler la posture sur le squat la prochaine fois.", exercises: [
+        { name: "Développé couché hammer", group: "PECTORAUX", series: "4", reps: "10-12", charge: "30", recup: "1'30", form: "ok" },
+        { name: "Squat sumo", group: "CUISSES", series: "4", reps: "12", charge: "40", recup: "1'30", form: "revoir" },
+        { name: "Climber", group: "CARDIO", cardio: true, temps: "10 min", durete: "Niveau 6", form: "ok" },
+      ] } },
+  ];
+
+  return { clients, bookings };
+}
+
 function App() {
   const [screen, setScreen] = useState("home");
   const [booted, setBooted] = useState(false);
@@ -122,6 +169,16 @@ function App() {
 
   useEffect(() => {
     (() => {
+      const seeded = sget("oit_seeded", false);
+      if (!seeded) {
+        const demo = buildDemoData();
+        setClients(demo.clients);
+        setBookings(demo.bookings);
+        setBlocked([]); setProfile(null); setProgram(null); setMessages([]); setProgress([]); setHabits({}); setB2bLeads([]); setActiveClientId(null);
+        sset("oit_seeded", true);
+        setBooted(true);
+        return;
+      }
       setBookings(sget("oit_bookings", []));
       setBlocked(sget("oit_blocked", []));
       setProfile(sget("oit_profile", null));
@@ -1256,6 +1313,8 @@ function CoachDash({ store }) {
         <div style={{ height: 12, background: "#11262e", borderRadius: 99, overflow: "hidden" }}><div style={{ width: prog + "%", height: "100%", background: G, transition: "width .5s" }} /></div>
         <p style={{ color: "#7a9098", fontSize: 12, marginTop: 8 }}>{revenue >= rent ? "✅ Loyer couvert — le reste, c'est ton salaire." : `Encore ${rent - revenue} € pour couvrir le loyer ce mois-ci.`}</p>
       </div>
+
+      <button className="hov" onClick={() => { if (confirm("Recharger les données de démonstration ? Cela remplace les données actuelles.")) { try { Object.keys(localStorage).filter(k => k.startsWith("oit2_")).forEach(k => localStorage.removeItem(k)); } catch (e) {} location.reload(); } }} style={{ ...btnGhost(false), width: "100%", marginTop: 18, fontSize: 12 }}>↺ Réinitialiser la démo</button>
     </div>
   );
 }
@@ -1364,12 +1423,44 @@ function CoachAgenda({ store }) {
 
 // ---------- CARNET DE SÉANCE (1h, exercices + charges + validation mouvement + note) ----------
 function SessionLog({ booking, onBack, onSave }) {
-  const init = booking.session || { duration: 60, exercises: [{ name: "", charge: "", reps: "", form: "ok" }], note: "", rating: 0 };
+  const init = booking.session || { duration: 60, exercises: [], note: "", rating: 0 };
   const [s, setS] = useState(init);
+  const [picker, setPicker] = useState(false);
+  const [customName, setCustomName] = useState("");
   const setEx = (i, field, val) => setS({ ...s, exercises: s.exercises.map((e, idx) => idx === i ? { ...e, [field]: val } : e) });
-  const addEx = () => setS({ ...s, exercises: [...s.exercises, { name: "", charge: "", reps: "", form: "ok" }] });
   const delEx = (i) => setS({ ...s, exercises: s.exercises.filter((_, idx) => idx !== i) });
+  const addEx = (name, group) => {
+    const isCardio = group === CARDIO_GROUP;
+    setS({ ...s, exercises: [...s.exercises, isCardio ? { name, group, cardio: true, temps: "", durete: "", form: "ok" } : { name, group, charge: "", reps: "", series: "", recup: "", form: "ok" }] });
+    setPicker(false); setCustomName("");
+  };
   const d = new Date(booking.dateKey);
+
+  if (picker) return (
+    <div style={{ paddingTop: 24 }}>
+      <button className="hov" onClick={() => setPicker(false)} style={{ background: "none", border: "none", color: G, cursor: "pointer", fontWeight: 700, fontSize: 13, padding: 0, marginBottom: 12 }}>← Retour à la séance</button>
+      <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 22, textTransform: "uppercase", marginBottom: 4 }}>Choisir un exercice</h2>
+      <p style={{ color: "#7a9098", fontSize: 13, marginBottom: 16 }}>Sélectionne dans la bibliothèque, ou ajoute le tien en bas.</p>
+      {Object.entries(EXO_LIB).map(([group, list]) => (
+        <div key={group} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: G, fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>{group === CARDIO_GROUP ? "🏃 " + group : group}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {list.map(name => (
+              <button key={name} className="hov" onClick={() => addEx(name, group)} style={{ padding: "8px 12px", borderRadius: 99, cursor: "pointer", fontSize: 13, fontWeight: 600, border: `1px solid ${BORDER}`, background: CARD, color: "#cfe0e4" }}
+                onMouseOver={e => e.currentTarget.style.borderColor = G} onMouseOut={e => e.currentTarget.style.borderColor = BORDER}>{name}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div style={{ background: CARD, border: `1px solid ${G}`, borderRadius: 12, padding: 14, marginTop: 8 }}>
+        <div style={{ fontWeight: 800, marginBottom: 8, fontSize: 14 }}>Exercice perso</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input style={{ ...inp, flex: 1 }} value={customName} onChange={e => setCustomName(e.target.value)} placeholder="Nom de l'exercice" />
+          <button className="hov" disabled={!customName.trim()} onClick={() => addEx(customName.trim(), "PERSO")} style={{ ...btnMain, width: "auto", padding: "0 18px", opacity: customName.trim() ? 1 : .4 }}>Ajouter</button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ paddingTop: 24 }}>
@@ -1392,27 +1483,42 @@ function SessionLog({ booking, onBack, onSave }) {
         </div>
       </div>
 
-      <div style={{ fontWeight: 800, marginBottom: 8 }}>Exercices & charges</div>
+      <div style={{ fontWeight: 800, marginBottom: 8 }}>Exercices {s.exercises.length > 0 && <span style={{ color: G }}>({s.exercises.length})</span>}</div>
+      {s.exercises.length === 0 && <div style={{ color: "#7a9098", fontSize: 13, padding: "10px 0 14px" }}>Aucun exercice. Clique « + Ajouter un exercice » pour piocher dans la bibliothèque de Sébastien.</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {s.exercises.map((e, i) => (
           <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12 }}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input style={{ ...inp, flex: 2 }} value={e.name} onChange={ev => setEx(i, "name", ev.target.value)} placeholder={`Exercice ${i + 1} (ex: Squat)`} />
-              <button className="hov" onClick={() => delEx(i)} style={{ ...btnGhost(false), borderColor: "#552", padding: "8px 12px" }}>✕</button>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800 }}>{i + 1}. {e.name}</div>
+                {e.group && e.group !== "PERSO" && <div style={{ fontSize: 11, color: e.cardio ? "#7ac0e8" : G, fontWeight: 700 }}>{e.group}</div>}
+              </div>
+              <button className="hov" onClick={() => delEx(i)} style={{ ...btnGhost(false), borderColor: "#552", padding: "6px 10px" }}>✕</button>
             </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input style={{ ...inp, flex: 1 }} value={e.charge} onChange={ev => setEx(i, "charge", ev.target.value)} placeholder="Charge (kg)" />
-              <input style={{ ...inp, flex: 1 }} value={e.reps} onChange={ev => setEx(i, "reps", ev.target.value)} placeholder="Séries × reps" />
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              {[["ok", "✓ Mouvement correct", G], ["revoir", "⚠ À revoir", "#e8c044"], ["ko", "✕ Incorrect", "#e88"]].map(([v, label, col]) => (
-                <button key={v} className="hov" onClick={() => setEx(i, "form", v)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700, border: `1px solid ${e.form === v ? col : BORDER}`, background: e.form === v ? col + "22" : "transparent", color: e.form === v ? col : "#7a9098" }}>{label}</button>
-              ))}
-            </div>
+            {e.cardio ? (
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input style={{ ...inp, flex: 1 }} value={e.temps} onChange={ev => setEx(i, "temps", ev.target.value)} placeholder="Temps (ex: 10 min)" />
+                <input style={{ ...inp, flex: 1 }} value={e.durete} onChange={ev => setEx(i, "durete", ev.target.value)} placeholder="Dureté / niveau" />
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                <input style={{ ...inp, flex: 1, minWidth: 70 }} value={e.series} onChange={ev => setEx(i, "series", ev.target.value)} placeholder="Séries" />
+                <input style={{ ...inp, flex: 1, minWidth: 70 }} value={e.reps} onChange={ev => setEx(i, "reps", ev.target.value)} placeholder="Reps" />
+                <input style={{ ...inp, flex: 1, minWidth: 70 }} value={e.charge} onChange={ev => setEx(i, "charge", ev.target.value)} placeholder="Charge kg" />
+                <input style={{ ...inp, flex: 1, minWidth: 70 }} value={e.recup} onChange={ev => setEx(i, "recup", ev.target.value)} placeholder="Récup" />
+              </div>
+            )}
+            {!e.cardio && (
+              <div style={{ display: "flex", gap: 6 }}>
+                {[["ok", "✓ Correct", G], ["revoir", "⚠ À revoir", "#e8c044"], ["ko", "✕ Incorrect", "#e88"]].map(([v, label, col]) => (
+                  <button key={v} className="hov" onClick={() => setEx(i, "form", v)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700, border: `1px solid ${e.form === v ? col : BORDER}`, background: e.form === v ? col + "22" : "transparent", color: e.form === v ? col : "#7a9098" }}>{label}</button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
-      <button className="hov" onClick={addEx} style={{ ...btnGhost(false), width: "100%", marginTop: 10 }}>+ Ajouter un exercice</button>
+      <button className="hov" onClick={() => setPicker(true)} style={{ ...btnMain, width: "100%", marginTop: 12 }}>+ Ajouter un exercice</button>
 
       <label style={lbl}>Commentaire global</label>
       <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} value={s.note} onChange={e => setS({ ...s, note: e.target.value })} placeholder="Ressenti, progrès, points à travailler la prochaine fois…" />
