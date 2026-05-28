@@ -128,12 +128,19 @@ function buildDemoData() {
   const now = Date.now();
 
   const clients = [
-    { id: "cDemo1", name: "Marie Dupont", email: "marie.dupont@email.com", goal: "Perdre 5 kg et se tonifier", createdAt: now - 86400000 * 40, weighins: [
+    { id: "cDemo1", name: "Marie Dupont", email: "marie.dupont@email.com", goal: "Perdre 5 kg et se tonifier", createdAt: now - 86400000 * 40, assignedSessions: [
+      { id: "asDemo1", title: "Haut du corps (maison)", createdAt: now - 86400000 * 2, exercises: [
+        { name: "Pompes", group: "PECTORAUX", targetSeries: "4", targetReps: "12", targetCharge: "" },
+        { name: "Tirage horizontal", group: "DORSAUX", targetSeries: "4", targetReps: "12", targetCharge: "20" },
+        { name: "Élévations latérales frontales", group: "ÉPAULES", targetSeries: "3", targetReps: "15", targetCharge: "5" },
+        { name: "Vélo", group: "CARDIO", cardio: true, targetTemps: "15 min", targetDurete: "Niveau 5" },
+      ], clientLog: null },
+    ], weighins: [
       { ts: now - 86400000 * 35, date: dk(-35), poids: 74, imc: 25.6, graisse: 31, muscle: 30, metabolisme: 1380, viscerale: 9 },
       { ts: now - 86400000 * 18, date: dk(-18), poids: 72.5, imc: 25.1, graisse: 29, muscle: 31, metabolisme: 1410, viscerale: 8 },
       { ts: now - 86400000 * 3, date: dk(-3), poids: 71, imc: 24.6, graisse: 27, muscle: 32, metabolisme: 1440, viscerale: 7 },
     ] },
-    { id: "cDemo2", name: "Thomas Bernard", email: "t.bernard@email.com", goal: "Prise de muscle", createdAt: now - 86400000 * 20, weighins: [
+    { id: "cDemo2", name: "Thomas Bernard", email: "t.bernard@email.com", goal: "Prise de muscle", createdAt: now - 86400000 * 20, assignedSessions: [], weighins: [
       { ts: now - 86400000 * 14, date: dk(-14), poids: 78, imc: 23.4, graisse: 18, muscle: 38, metabolisme: 1750, viscerale: 6 },
       { ts: now - 86400000 * 2, date: dk(-2), poids: 79.5, imc: 23.8, graisse: 17, muscle: 40, metabolisme: 1790, viscerale: 6 },
     ] },
@@ -622,7 +629,7 @@ function Tile({ icon, title, sub, onClick }) {
 function ClientForme({ store }) {
   const { clients } = store;
   // Démo : on affiche la fiche du dernier client créé (= "le client connecté")
-  const fiche = clients.length ? clients[clients.length - 1] : null;
+  const fiche = clients.length ? clients[0] : null;
   const weighins = fiche ? [...fiche.weighins].sort((a, b) => a.ts - b.ts) : [];
   const last = weighins[weighins.length - 1];
   const prev = weighins[weighins.length - 2];
@@ -787,45 +794,95 @@ function genProgram(profile) {
 }
 
 function ClientProgram({ store, setTab }) {
-  const { profile, program, setProgram } = store;
-  const [done, setDone] = useState({});
-  const [gen, setGen] = useState(false);
+  const { clients, setClients } = store;
+  // Démo : le "client connecté" = dernière fiche créée
+  const fiche = clients.length ? clients[0] : null;
+  const sessions = fiche?.assignedSessions || [];
+  const [active, setActive] = useState(null);
 
-  const generate = () => { setGen(true); setTimeout(() => { setProgram({ ...genProgram(profile), generatedAt: Date.now() }); setGen(false); }, 1600); };
+  const updateFiche = (updated) => setClients(clients.map(c => c.id === updated.id ? updated : c));
 
-  if (gen) return <div style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-    <div style={{ fontSize: 40, marginBottom: 14 }}>🤖</div><div style={{ fontFamily: "'Archivo Black'", fontSize: 19 }}>Génération de ton programme…</div>
-    <div style={{ marginTop: 12 }}><span className="dot" /><span className="dot" style={{ animationDelay: ".2s" }} /><span className="dot" style={{ animationDelay: ".4s" }} /></div>
-  </div>;
+  if (!fiche || sessions.length === 0) return (
+    <div style={{ paddingTop: 30, textAlign: "center" }}>
+      <div style={{ fontSize: 40 }}>📋</div>
+      <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 22, textTransform: "uppercase", margin: "10px 0" }}>Mes séances</h2>
+      <p style={{ color: "#7a9098", maxWidth: 320, margin: "0 auto" }}>Sébastien n'a pas encore préparé de séance à faire seul. Tu la retrouveras ici dès qu'il t'en assigne une.</p>
+    </div>
+  );
 
-  if (!program) return <div style={{ paddingTop: 30, textAlign: "center" }}>
-    <div style={{ fontSize: 40 }}>📋</div>
-    <h2 style={{ fontFamily: "'Archivo Black'", fontSize: 22, textTransform: "uppercase", margin: "10px 0" }}>Ton programme</h2>
-    <p style={{ color: "#7a9098", marginBottom: 20, maxWidth: 320, marginInline: "auto" }}>On crée un programme adapté à ton objectif{profile?.goal ? ` « ${profile.goal} »` : ""}. Sébastien le validera et l'ajustera avec toi.</p>
-    <button className="hov" onClick={generate} style={{ ...btnMain, maxWidth: 300, margin: "0 auto" }}>Générer mon programme</button>
-    {!profile && <button className="hov" onClick={() => setTab("home")} style={{ ...btnGhost(false), display: "block", margin: "12px auto 0" }}>Faire mon bilan d'abord</button>}
-  </div>;
+  // exécution d'une séance
+  if (active !== null) {
+    const sess = sessions.find(s => s.id === active);
+    if (sess) return <ExecuteSession session={sess} onBack={() => setActive(null)} onSubmit={(log) => { updateFiche({ ...fiche, assignedSessions: sessions.map(s => s.id === sess.id ? { ...s, clientLog: log } : s) }); setActive(null); }} />;
+  }
 
   return (
     <div style={{ paddingTop: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <h2 style={{ fontFamily: "'Archivo Black'", fontSize: 20, textTransform: "uppercase" }}>Mon programme</h2>
-        <span style={{ fontSize: 11, background: G_DIM, color: G, border: `1px solid ${G}`, padding: "3px 8px", borderRadius: 6, fontWeight: 800 }}>✓ validé par Seb</span>
-      </div>
-      <p style={{ color: G, fontWeight: 700, marginBottom: 16 }}>{program.title}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {program.ex.map((e, i) => (
-          <div key={i} onClick={() => setDone({ ...done, [i]: !done[i] })} className="hov" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 14, background: done[i] ? G_DIM : CARD, border: `1px solid ${done[i] ? G : BORDER}`, borderRadius: 12, padding: 14 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, border: `2px solid ${done[i] ? G : "#3a5560"}`, background: done[i] ? G : "transparent", color: "#000", display: "grid", placeItems: "center", fontWeight: 900, flexShrink: 0 }}>{done[i] ? "✓" : ""}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, textDecoration: done[i] ? "line-through" : "none", opacity: done[i] ? .6 : 1 }}>{i + 1}. {e.name}</div>
-              <div style={{ fontSize: 13, color: G }}>{e.sr}</div>
+      <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 22, textTransform: "uppercase", marginBottom: 4 }}>Mes séances</h2>
+      <p style={{ color: "#7a9098", fontSize: 13, marginBottom: 16 }}>Les séances préparées par Sébastien à faire en autonomie.</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {sessions.map(s => {
+          const done = s.clientLog?.done;
+          return (
+            <div key={s.id} className="hov" onClick={() => setActive(s.id)} style={{ cursor: "pointer", background: `linear-gradient(120deg, ${CARD}, #081318)`, border: `1px solid ${done ? G + "66" : BORDER}`, borderRadius: 14, padding: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>{s.title}</div>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: done ? G : "#334", color: done ? "#04150a" : "#aaa" }}>{done ? "✓ Fait" : "À faire"}</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#7a9098", marginTop: 4 }}>{s.exercises.length} exercice{s.exercises.length > 1 ? "s" : ""} · validé par Seb</div>
+              <div style={{ color: G, fontSize: 13, fontWeight: 700, marginTop: 8 }}>{done ? "Revoir / modifier →" : "Commencer la séance →"}</div>
             </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ExecuteSession({ session, onBack, onSubmit }) {
+  const init = session.clientLog?.exercises || session.exercises.map(e => e.cardio ? { checked: false, realTemps: "", realDurete: "" } : { checked: false, realCharge: "", realReps: "" });
+  const [log, setLog] = useState(init);
+  const [note, setNote] = useState(session.clientLog?.note || "");
+  const set = (i, f, v) => setLog(log.map((l, idx) => idx === i ? { ...l, [f]: v } : l));
+  const toggle = (i) => setLog(log.map((l, idx) => idx === i ? { ...l, checked: !l.checked } : l));
+  const doneCount = log.filter(l => l.checked).length;
+
+  return (
+    <div style={{ paddingTop: 24 }}>
+      <button className="hov" onClick={onBack} style={{ background: "none", border: "none", color: G, cursor: "pointer", fontWeight: 700, fontSize: 13, padding: 0, marginBottom: 12 }}>← Mes séances</button>
+      <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 22, textTransform: "uppercase" }}>{session.title}</h2>
+      <p style={{ color: "#7a9098", fontSize: 13, marginBottom: 16 }}>Coche chaque exercice fait et note ce que tu as vraiment soulevé.</p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {session.exercises.map((e, i) => (
+          <div key={i} style={{ background: log[i].checked ? G_DIM : CARD, border: `1px solid ${log[i].checked ? G : BORDER}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              <div onClick={() => toggle(i)} className="hov" style={{ width: 26, height: 26, borderRadius: 7, border: `2px solid ${log[i].checked ? G : "#3a5560"}`, background: log[i].checked ? G : "transparent", color: "#04150a", display: "grid", placeItems: "center", fontWeight: 900, flexShrink: 0, cursor: "pointer" }}>{log[i].checked ? "✓" : ""}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800 }}>{i + 1}. {e.name}</div>
+                <div style={{ fontSize: 12, color: G }}>{e.cardio ? `Cible : ${e.targetTemps || "?"}${e.targetDurete ? " · " + e.targetDurete : ""}` : `Cible : ${e.targetSeries || "?"} × ${e.targetReps || "?"}${e.targetCharge ? " @ " + e.targetCharge + " kg" : ""}`}</div>
+              </div>
+            </div>
+            {e.cardio ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={{ ...inp, flex: 1 }} value={log[i].realTemps} onChange={ev => set(i, "realTemps", ev.target.value)} placeholder="Temps réalisé" />
+                <input style={{ ...inp, flex: 1 }} value={log[i].realDurete} onChange={ev => set(i, "realDurete", ev.target.value)} placeholder="Dureté" />
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={{ ...inp, flex: 1 }} value={log[i].realCharge} onChange={ev => set(i, "realCharge", ev.target.value)} placeholder="Charge réelle (kg)" />
+                <input style={{ ...inp, flex: 1 }} value={log[i].realReps} onChange={ev => set(i, "realReps", ev.target.value)} placeholder="Reps réalisées" />
+              </div>
+            )}
           </div>
         ))}
       </div>
-      <div style={{ textAlign: "center", color: "#7a9098", fontSize: 13, margin: "16px 0" }}>{Object.values(done).filter(Boolean).length}/{program.ex.length} exercices terminés</div>
-      <button className="hov" onClick={() => { setProgram(null); setDone({}); }} style={{ ...btnGhost(false), width: "100%" }}>Régénérer un autre programme</button>
+
+      <label style={lbl}>Un mot pour Sébastien (optionnel)</label>
+      <textarea style={{ ...inp, minHeight: 60, resize: "vertical" }} value={note} onChange={e => setNote(e.target.value)} placeholder="Ressenti, douleurs, questions…" />
+
+      <div style={{ textAlign: "center", color: "#7a9098", fontSize: 13, margin: "14px 0" }}>{doneCount}/{session.exercises.length} exercices cochés</div>
+      <button className="hov" onClick={() => onSubmit({ done: true, exercises: log, note, doneAt: Date.now() })} style={{ ...btnMain }}>Envoyer à Sébastien</button>
     </div>
   );
 }
@@ -1132,7 +1189,7 @@ function CoachClients({ store }) {
 
   const createClient = () => {
     if (!newName.trim()) return;
-    const c = { id: "c" + Date.now(), name: newName.trim(), email: newEmail.trim(), goal: "", createdAt: Date.now(), weighins: [] };
+    const c = { id: "c" + Date.now(), name: newName.trim(), email: newEmail.trim(), goal: "", createdAt: Date.now(), weighins: [], assignedSessions: [] };
     setClients([...clients, c]);
     setActiveClientId(c.id);
     setNewName(""); setNewEmail(""); setAdding(false);
@@ -1247,7 +1304,140 @@ function ClientFile({ client, onBack, onUpdate, onDelete }) {
         )}
       </div>
 
+      {/* SÉANCES À FAIRE SEUL (prescrites par Seb) */}
+      <AssignedSessionsCoach client={client} onUpdate={onUpdate} />
+
       <button className="hov" onClick={onDelete} style={{ ...btnGhost(false), width: "100%", marginTop: 20, borderColor: "#552", color: "#c88" }}>Supprimer la fiche</button>
+    </div>
+  );
+}
+
+// ---- Côté COACH : créer/assigner des séances à faire seul + voir le retour client ----
+function AssignedSessionsCoach({ client, onUpdate }) {
+  const sessions = client.assignedSessions || [];
+  const [building, setBuilding] = useState(false);
+
+  const saveSession = (sess) => {
+    onUpdate({ ...client, assignedSessions: [...sessions, sess] });
+    setBuilding(false);
+  };
+  const delSession = (id) => onUpdate({ ...client, assignedSessions: sessions.filter(s => s.id !== id) });
+
+  if (building) return <div style={{ marginTop: 20 }}><AssignSessionBuilder onCancel={() => setBuilding(false)} onSave={saveSession} /></div>;
+
+  return (
+    <div style={{ marginTop: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ fontWeight: 800 }}>Séances à faire seul {sessions.length > 0 && <span style={{ color: G }}>({sessions.length})</span>}</div>
+        <button className="hov" onClick={() => setBuilding(true)} style={{ ...btnMain, width: "auto", padding: "8px 14px", fontSize: 13 }}>+ Assigner</button>
+      </div>
+      {sessions.length === 0 && <Empty t="Aucune séance assignée" s="Prépare une séance que le client fera seul entre vos coachings." />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {sessions.map(s => {
+          const log = s.clientLog;
+          return (
+            <div key={s.id} style={{ background: CARD, border: `1px solid ${log?.done ? G + "66" : BORDER}`, borderRadius: 12, padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 800 }}>{s.title}</div>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: log?.done ? G : "#334", color: log?.done ? "#04150a" : "#aaa" }}>{log?.done ? "✓ Réalisée" : "À faire"}</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#7a9098", marginTop: 4 }}>{s.exercises.length} exercice{s.exercises.length > 1 ? "s" : ""}</div>
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                {s.exercises.map((e, i) => {
+                  const done = log?.exercises?.[i];
+                  return (
+                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 5 }}>
+                      <span style={{ color: done?.checked ? "#fff" : "#9fb4ba" }}>{done?.checked ? "✅ " : "⬜ "}{e.name}</span>
+                      <span style={{ color: "#7a9098" }}>
+                        {e.cardio
+                          ? `cible ${e.targetTemps || "?"}${log?.done ? ` · fait ${done?.realTemps || "—"}` : ""}`
+                          : `cible ${e.targetSeries || "?"}×${e.targetReps || "?"} ${e.targetCharge ? "@" + e.targetCharge + "kg" : ""}${log?.done ? ` · fait ${done?.realCharge || "—"}kg` : ""}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {log?.done && log.note && <div style={{ marginTop: 8, fontSize: 12, color: "#cfe0e4", fontStyle: "italic" }}>💬 « {log.note} »</div>}
+              <button className="hov" onClick={() => delSession(s.id)} style={{ ...btnGhost(false), width: "100%", marginTop: 10, fontSize: 12, borderColor: "#552" }}>Supprimer</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AssignSessionBuilder({ onCancel, onSave }) {
+  const [title, setTitle] = useState("");
+  const [exos, setExos] = useState([]);
+  const [picker, setPicker] = useState(false);
+  const [customName, setCustomName] = useState("");
+
+  const addExo = (name, group) => {
+    const isCardio = group === CARDIO_GROUP;
+    setExos([...exos, isCardio ? { name, group, cardio: true, targetTemps: "", targetDurete: "" } : { name, group, targetSeries: "", targetReps: "", targetCharge: "" }]);
+    setPicker(false); setCustomName("");
+  };
+  const setExo = (i, f, v) => setExos(exos.map((e, idx) => idx === i ? { ...e, [f]: v } : e));
+  const delExo = (i) => setExos(exos.filter((_, idx) => idx !== i));
+  const save = () => { if (!title.trim() || exos.length === 0) return; onSave({ id: "as" + Date.now(), title: title.trim(), createdAt: Date.now(), exercises: exos, clientLog: null }); };
+
+  if (picker) return (
+    <div>
+      <button className="hov" onClick={() => setPicker(false)} style={{ background: "none", border: "none", color: G, cursor: "pointer", fontWeight: 700, fontSize: 13, padding: 0, marginBottom: 12 }}>← Retour</button>
+      <h3 style={{ fontFamily: "'Anton',sans-serif", fontSize: 18, textTransform: "uppercase", marginBottom: 12 }}>Choisir un exercice</h3>
+      {Object.entries(EXO_LIB).map(([group, list]) => (
+        <div key={group} style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: G, fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>{group === CARDIO_GROUP ? "🏃 " + group : group}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {list.map(name => <button key={name} className="hov" onClick={() => addExo(name, group)} style={{ padding: "8px 12px", borderRadius: 99, cursor: "pointer", fontSize: 13, fontWeight: 600, border: `1px solid ${BORDER}`, background: BG, color: "#cfe0e4" }}>{name}</button>)}
+          </div>
+        </div>
+      ))}
+      <div style={{ background: BG, border: `1px solid ${G}`, borderRadius: 12, padding: 14 }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input style={{ ...inp, flex: 1 }} value={customName} onChange={e => setCustomName(e.target.value)} placeholder="Exercice perso" />
+          <button className="hov" disabled={!customName.trim()} onClick={() => addExo(customName.trim(), "PERSO")} style={{ ...btnMain, width: "auto", padding: "0 16px", opacity: customName.trim() ? 1 : .4 }}>Ajouter</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${G}`, borderRadius: 14, padding: 16 }}>
+      <div style={{ fontWeight: 800, marginBottom: 10 }}>Nouvelle séance à faire seul</div>
+      <label style={lbl}>Titre de la séance</label>
+      <input style={inp} value={title} onChange={e => setTitle(e.target.value)} placeholder="ex : Haut du corps, Jambes, Cardio…" />
+
+      <div style={{ fontWeight: 700, fontSize: 13, margin: "14px 0 8px" }}>Exercices & cibles</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {exos.map((e, i) => (
+          <div key={i} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{e.name} <span style={{ color: e.cardio ? "#7ac0e8" : G, fontSize: 11 }}>{e.group !== "PERSO" ? e.group : ""}</span></span>
+              <button className="hov" onClick={() => delExo(i)} style={{ background: "none", border: "none", color: "#c88", cursor: "pointer" }}>✕</button>
+            </div>
+            {e.cardio ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={{ ...inp, flex: 1 }} value={e.targetTemps} onChange={ev => setExo(i, "targetTemps", ev.target.value)} placeholder="Temps cible (ex: 15 min)" />
+                <input style={{ ...inp, flex: 1 }} value={e.targetDurete} onChange={ev => setExo(i, "targetDurete", ev.target.value)} placeholder="Dureté" />
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={{ ...inp, flex: 1, minWidth: 60 }} value={e.targetSeries} onChange={ev => setExo(i, "targetSeries", ev.target.value)} placeholder="Séries" />
+                <input style={{ ...inp, flex: 1, minWidth: 60 }} value={e.targetReps} onChange={ev => setExo(i, "targetReps", ev.target.value)} placeholder="Reps" />
+                <input style={{ ...inp, flex: 1, minWidth: 60 }} value={e.targetCharge} onChange={ev => setExo(i, "targetCharge", ev.target.value)} placeholder="Charge kg" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <button className="hov" onClick={() => setPicker(true)} style={{ ...btnGhost(false), width: "100%", marginTop: 10 }}>+ Ajouter un exercice</button>
+
+      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <button className="hov" onClick={onCancel} style={{ ...btnGhost(false), flex: 1 }}>Annuler</button>
+        <button className="hov" disabled={!title.trim() || exos.length === 0} onClick={save} style={{ ...btnMain, flex: 2, opacity: (title.trim() && exos.length) ? 1 : .4 }}>Assigner au client</button>
+      </div>
     </div>
   );
 }
