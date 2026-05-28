@@ -53,6 +53,12 @@ const BORDER = "#1b333d";
 
 const COACH = { name: "Sébastien Leloutre", brand: "OBJECTIF'IT", phone: "+33 6 30 93 23 28", email: "privatcoach.sl@gmail.com", insta: "objectif.it" };
 
+// ---- PARTENAIRES ----
+const PARTENAIRES = [
+  { id: "rodeff", name: "David Rodeff", role: "Nutrition & nutrition sportive", tagline: "Conseiller certifié. Corps et psychologie, une seule approche.", url: "https://rodeff-nutrition.com", initials: "DR", active: true },
+  { id: "leslie", name: "Leslie", role: "Bientôt parmi nous", tagline: "Nouveau partenariat en préparation.", url: "", initials: "L", active: false },
+];
+
 const DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const SLOT_HOURS = ["07:00","08:00","09:00","10:00","12:00","17:00","18:00","19:00","20:00"];
@@ -60,7 +66,7 @@ const SLOT_HOURS = ["07:00","08:00","09:00","10:00","12:00","17:00","18:00","19:
 // ---- VRAIES OFFRES (plaquette) ----
 const FORMULES = [
   { id: "decouverte", cat: "Formule", name: "Pack Découverte", price: 200, unit: "", sessions: 4, desc: "4 coachings + 1 bilan général.", tag: "" },
-  { id: "starter", cat: "Formule", name: "Pack Starter", price: 235, unit: "", sessions: 3, desc: "3 coachings + bilan général + bilan nutritionnel (diététicien) + programme clé en main.", tag: "COMPLET" },
+  { id: "starter", cat: "Formule", name: "Pack Starter", price: 235, unit: "", sessions: 3, desc: "3 coachings + bilan général + bilan nutritionnel avec David Rodeff + programme clé en main.", tag: "COMPLET", partner: "rodeff" },
   { id: "kdo", cat: "Formule", name: "Pack KDO", price: 100, unit: "", sessions: 2, desc: "2 coachings + 1 bilan général. Idéal pour offrir.", tag: "CADEAU" },
 ];
 const ABONNEMENTS = [
@@ -296,6 +302,24 @@ function Home({ setScreen }) {
               <p style={{ color: "#7a9098", fontSize: 12, minHeight: 56, lineHeight: 1.4 }}>{o.desc}</p>
               <div style={{ fontFamily: "'Archivo Black'", fontSize: 23, color: G }}>{euro(o.price)}</div>
               {o.unit && <div style={{ color: "#5a6b70", fontSize: 11 }}>{o.unit}</div>}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* NOS PARTENAIRES */}
+      <section style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 20px 10px" }}>
+        <h2 style={{ fontFamily: "'Anton',sans-serif", fontSize: 30, textTransform: "uppercase", textAlign: "center", marginBottom: 6, letterSpacing: .5 }}>Nos <span style={{ color: G }}>partenaires</span></h2>
+        <p style={{ color: "#7a9098", textAlign: "center", marginBottom: 24 }}>Un réseau d'experts pour t'accompagner au-delà de l'entraînement.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14, maxWidth: 640, margin: "0 auto" }}>
+          {PARTENAIRES.map(pt => (
+            <div key={pt.id} style={{ background: `linear-gradient(165deg, ${CARD}, #081318)`, border: `1px solid ${pt.active ? BORDER : "#1a2a30"}`, borderRadius: 16, padding: 20, opacity: pt.active ? 1 : .6, textAlign: "center" }}>
+              <div style={{ width: 60, height: 60, borderRadius: 99, margin: "0 auto 12px", background: pt.active ? `linear-gradient(150deg, ${G}, ${G2})` : "#1a2a30", color: pt.active ? "#04150a" : "#5a6b70", display: "grid", placeItems: "center", fontFamily: "'Anton',sans-serif", fontSize: 22 }}>{pt.initials}</div>
+              <div style={{ fontWeight: 800, fontSize: 17 }}>{pt.name}</div>
+              <div style={{ color: G, fontSize: 12, fontWeight: 700, marginTop: 2 }}>{pt.role}</div>
+              <p style={{ color: "#7a9098", fontSize: 13, lineHeight: 1.45, marginTop: 8, minHeight: 38 }}>{pt.tagline}</p>
+              {pt.active && pt.url && <a href={pt.url} target="_blank" rel="noopener noreferrer" className="hov" style={{ display: "inline-block", marginTop: 8, color: G, fontWeight: 800, fontSize: 13, textDecoration: "none" }}>Découvrir →</a>}
+              {!pt.active && <div style={{ marginTop: 8, color: "#5a6b70", fontSize: 12, fontWeight: 700 }}>Bientôt</div>}
             </div>
           ))}
         </div>
@@ -783,6 +807,7 @@ function ClientBooking({ store }) {
                     <p style={{ color: "#7a9098", fontSize: 12, minHeight: 44, lineHeight: 1.4 }}>{o.desc}</p>
                     <div style={{ fontFamily: "'Archivo Black'", fontSize: 21, color: G }}>{euro(o.price)}</div>
                     {o.unit && <div style={{ color: "#5a6b70", fontSize: 11 }}>{o.unit}</div>}
+                    {o.partner && (() => { const pt = PARTENAIRES.find(x => x.id === o.partner); return pt ? <div style={{ marginTop: 8, fontSize: 11, color: "#9fb4ba", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 18, height: 18, borderRadius: 99, background: `linear-gradient(150deg, ${G}, ${G2})`, color: "#04150a", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900 }}>{pt.initials}</span>avec {pt.name}</div> : null; })()}
                   </div>
                 ))}
               </div>
